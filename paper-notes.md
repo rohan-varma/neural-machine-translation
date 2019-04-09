@@ -37,11 +37,11 @@ Output: a fixed-length vector $$ c $$. Often computing by applying a function to
 
 **Seq to seq decoder**
 
-- Goal: predict next $$ y_t $$ given the context vector $$ c $$ and the previous $$ y_1 … y_{t-1} $$ 's. We define the probability of the translation as $$p(y_1 … y_T| c) = p(y_1 | c) * p(y_2 | y_1, c) * … p(y_t | y_1, … y_{t-1},c) = \prod_{t=1}^{T}p(y_t | y_1 … y_{t-1},c) $$
+- Goal: predict next $$ y_t $$ given the context vector $$ c $$ and the previous $$ y_1 … y_{t-1} $$ 's. We define the probability of the translation as $$p(y_1 … y_T\mid c) = p(y_1 \mid c) * p(y_2 \mid y_1, c) * … p(y_t \mid y_1, … y_{t-1},c) = \prod_{t=1}^{T}p(y_t \mid y_1 … y_{t-1},c) $$
 
 - In the decoder network, each of these conditional probabilities is defined using an RNN:
 
-  $$ p(y_t | y_1, … y_{t-1},c) = g(y_{t-1}, s_t, c) $$ i.e. each probability is computed as a function of the previous prediction at the previous timestep (we can also feed in the true label during training, which is known as *teacher forcing*), the current hidden state, and the intermediate context vector. We update the hidden state at each timestep similar to how we did it with the encoder RNN: $$ s_t = h(s_{t-1}, y_{t-1}) $$ where the initial $$ s_0 $$ could simply be $$ h(c)$$, the function applied to the original context vector.
+  $$ p(y_t \mid y_1, … y_{t-1},c) = g(y_{t-1}, s_t, c) $$ i.e. each probability is computed as a function of the previous prediction at the previous timestep (we can also feed in the true label during training, which is known as *teacher forcing*), the current hidden state, and the intermediate context vector. We update the hidden state at each timestep similar to how we did it with the encoder RNN: $$ s_t = h(s_{t-1}, y_{t-1}) $$ where the initial $$ s_0 $$ could simply be $$ h(c)$$, the function applied to the original context vector.
 
 
 
@@ -124,7 +124,7 @@ Output: a fixed-length vector $$ c $$. Often computing by applying a function to
 
 - Given this context vector, we can apply a function to compute the next state: $$ s_1 = f(s_0, y_0, c_1)$$ where $$ s_0$$ is an initial hidden state, $$ y_0$$ is the initial word (such as a start token) and $$ c_1$$ is the time-specific context we just created.
 
-- Using this new hidden state, we generate our output at this timestep $$ y_1$$: $$ p(y_1 | y_0, x) = g(y_{0},s_1, c_1)$$
+- Using this new hidden state, we generate our output at this timestep $$ y_1$$: $$ p(y_1 \mid y_0, x) = g(y_{0},s_1, c_1)$$
 
 - We note that to compute $$e_{2j}$$ in order to get the attention weights for the 2nd output, *we need access to* $$s_2$$ s1, so we must compute $$ s_1$$ before being able to compute the next set of attention weights.
 
