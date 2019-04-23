@@ -25,7 +25,7 @@ $$ h_t = f(W_{xh} x_t + W_{hh} h_{t-1} + b_{xh}) $$
 
 $$ y_t = f(W_{hy}h_t + b_{hy}) $$ (where $$ f $$ can be the softmax function, for example)
 
-
+Note that weights are *shared across time*, i.e. at each timestep $$ t $$, the weight matrix used does not changed. Tying weights across time is similar to the idea of tying weights across space in convolutional neural networks, where the advantage there is that we have spatial and translational invariance (i.e. intuitively it doesn't matter where the actual dog in the picture is, we only want to know *if* there is a dog in the picture.)
 
 **Seq to seq encoder**
 
@@ -51,7 +51,7 @@ Output: a fixed-length vector $$ c $$. Often computing by applying a function to
 ##### Intuition for what attention is
 
 - Given that we have our input sequence, we run it through a (bidirectional in the paper) RNN to get hidden states $$ a^i $$ for each $$ i $$ in the sequence. (There are actually both forward and backward activations if we use a bidirectional RNN, but we can simply take the concatenation to get a single activation)
-- One of the goals of the attention model is to compute *attention weights* $$\alpha_{ij} $$ where $$ \alpha_{ij} $$ indicates intuitively, when we're generating word $$ i $$ in the output translation, how much attention should we pay to word $$ j $$ in the source sentence? These values are used to weight the resulting hidden states. The below figure shows this:
+- One of the goals of the attention model is to compute *attention weights* $$\alpha_{ij} $$ where $$ \alpha_{ij} $$ indicates intuitively, when we're generating word $$ i $$ in the output translation, how much attention should we pay to word $$ j $$ in the source sentence? These values are used to weight the hidden states $$ a^j $$ in the source sentence. The below figure shows this:
 
 ![](images/attention_1.png)
 
@@ -67,7 +67,7 @@ Output: a fixed-length vector $$ c $$. Often computing by applying a function to
 
 - It remains to show how exactly the context $$ c $$ is defined at each timestep. Intuitively, for context $$ c_i $$, it should emphasize the region of the sentence that we should use when producing the output $$ c_i$$. It relies on $$ \alpha $$ and the encoder hidden states $$ a^i $$ . 
 
-- It also remains to show exactly how $$\alpha$$ values are calculated, which indicate how much attention we should pay to a particular word when generating a particular output word. Each $$\alpha_{ij} $$ is influenced by the encoder RNN's hidden state at time $$ j $$, and the *decoder RNN'*s hidden state at time $$ i - 1$$ (which in turn comes from the previous context and $$\alpha$$ values. 
+- It also remains to show exactly how $$\alpha$$ values are calculated, which indicate how much attention we should pay to a particular word when generating a particular output word. Each $$\alpha_{ij} $$ is influenced by the encoder RNN's (i.e., the RNN that is reading the source sentence) hidden state at time $$ j $$, and the *decoder RNN'*s hidden state at time $$ i - 1$$ (which in turn comes from the previous context and $$\alpha$$ values). 
 
 ![](images/attention_3.png)
 
@@ -96,7 +96,7 @@ Output: a fixed-length vector $$ c $$. Often computing by applying a function to
 
 - Each $$ e_{ij} $$ is computed as a function of the decoder RNN's previous hidden state activation (so the activation at time $$ i - 1 $$, note that we do not have access to the hidden state at the current timestep yet ) and the hidden state $$ a_j$$ of the encoder RNN
 
-- Note that for a fixed $$ i $$ such as $$ i = 1$$, we can compute $$\alpha_{1j}, 1 \leq j \leq T_x $$ independently of each other, **but the computation of any of the $$\alpha_{2j}$$'s are blocked** on the computation of the next hidden state ($$ s_1$$, for which we need the context vector $$c_1$$ for, for which we need the previous $$\alpha_{1j}$$'s for). Therefore, for any $$ i $$, we need to have computed $$\alpha_{1j}, \alpha_{2j}, ...\alpha_{ij} $$ before computing $$\alpha_{i+1j}$$ 
+- Note that for a fixed $$ i $$ such as $$ i = 1$$, we can compute $$\alpha_{1j}, 1 \leq j \leq T_x $$ independently of each other (where $$ T_x$$ is the size of our input sequence) (assuming that all the hidden states $$a_j$$ for our bidirectional encoder RNN have been computed) , **but the computation of any of the $$\alpha_{2j}$$'s are blocked** on the computation of the next hidden state ($$ s_1$$, for which we need the context vector $$c_1$$ for, for which we need *all* the previous $$\alpha_{1j}$$'s for). Therefore, for any $$ i $$, we need to have computed $$\alpha_{i1}, \alpha_{i2}, … \alpha_{iT_x}$$ before computing $$\alpha_{i+1j}$$ 
 
 - The function used to compute $$ e_{ij} $$ is a small, usually single-layer neural network with inputs $$s_{i-1} $$ (previous hidden state of our decoder RNN) and $$a_j$$ ($$j$$th hidden state of our encoder network)
 
@@ -118,7 +118,7 @@ Output: a fixed-length vector $$ c $$. Often computing by applying a function to
 
 - We now have a sequence of annotations $$a_j, 0 \leq j \leq T_x$$.
 
-- Next, we'd like to compute our first context vector $$ c_i$$, but for this we need our attention weights $$\alpha_{1j}$$, so we need to calculate $$e_{1j}$$ from our alignment model. We have $$e_{1j} = a(s_0, a_j), 0 \leq j \leq T_x$$ which is the output of a simple one-layer neural network. Now, we can run softmax to compute our alpha values $$\alpha_{1j}$$. 
+- Next, we'd like to compute our first context vector $$ c_i​$$, but for this we need our attention weights $$\alpha_{1j}​$$, so we need to calculate $$e_{1j}​$$ from our alignment model. We have $$e_{1j} = a(s_0, a_j), 0 \leq j \leq T_x​$$ which is the output of a simple one-layer neural network. Now, we can run softmax to compute our alpha values $$\alpha_{1j}​$$. 
 
 - Now, we can compute our context vector: $$c_{1} = \sum_{j=1}^{T_x}\alpha_{1,j}a_j$$ since we have $$ a_j$$ as our encoder RNN output and $$ \alpha_{1,j}$$ as our attention weight, that tells us for each input word $$ j $$ how much attention we should pay to it to produce the first word in our resulting translation.
 
