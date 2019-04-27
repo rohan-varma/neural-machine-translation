@@ -1,16 +1,18 @@
 """Train a sequence to sequence model on WMT data"""
 import torch
 from torch import nn
-from preprocess import normalize_string, filterPairs
+from preprocess import read_file, filterPairs, build_word_index, get_data
+import pickle
+import argparse
+import logging
+import sys
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logger = logging.getLogger()
 
 # tokens to mark the start and end of the sentence
 SOS_TOKEN = 0
 EOS_TOKEN = 1
-idx_to_word = {0: SOS_TOKEN, 1: EOS_TOKEN}
-word_to_idx = dict(zip(idx_to_word.values(), idx_to_word.keys()))
-print(idx_to_word)
-print(word_to_idx)
-next_idx = 2
 
 
 class seq2seq(nn.Module):
@@ -19,36 +21,10 @@ class seq2seq(nn.Module):
 
 
 
-
-
-def read_file(data_file):
-	lines = open(data_file, encoding='utf-8').read().strip().split('\n')
-	pairs = [[normalize_string(s) for s in l.split('\t')] for l in lines]
-	print(f'size of dataset: {len(pairs)}')
-	print(pairs[len(pairs)//2])
-	return pairs
-
-def build_word_index(sentences):
-	global next_idx
-	for pair in sentences:
-		for x in pair:
-			words = x.split()
-			for word in words:
-				if word not in word_to_idx:
-					# first, add it to idx_to_word
-					idx_to_word[next_idx] = word
-					# maintain this dinctionary so we dont double add words
-					word_to_idx[word] = next_idx
-					next_idx+=1 # increment so we don't clash indices
-
-
-
 if __name__ == '__main__':
-	data_file = 'data/eng-fra.txt'
-	sentence_pairs = read_file(data_file)
-	print('filtering pairs...')
-	short_sentences = filterPairs(sentence_pairs)
-	print(f'trimmed dataset to {len(short_sentences)}')
-	print(short_sentences[len(short_sentences)//2])
-	build_word_index(short_sentences)
-	import pdb; pdb.set_trace()
+	parser = argparse.ArgumentParser(description='Attention model training')
+	parser.add_argument('--sentences_data', type=str, help='file containing list of sentences and index generated, outputted by this script')
+	parser.add_argument('--data', type=str, default='data/eng-fra.txt', help='dataset of english to french translation')
+	parser.add_argument('--save_processed', default='data/eng-fra-processed.txt', help='whether to save processed list and index of dataset')
+	args = parser.parse_args()
+	short_sentences, idx_to_word, word_to_idx = get_data(args)
