@@ -37,10 +37,7 @@ class Encoder(nn.Module):
         )
 
     def forward(self, sentence_input, hidden_state, cell_state):
-        embedded = self.embedding(sentence_input)
-        logger.info(embedded.shape)
-        embedded = embedded.view(1, 1, -1)
-        logger.info(embedded.shape)
+        embedded = self.embedding(sentence_input).view(1, 1, -1)
         out, (hidden_out, cell_out) = self.LSTM(
             embedded, (hidden_state, cell_state))
 
@@ -87,14 +84,8 @@ def vectorize(sentence, word_to_idx):
     return idxes
 
 
-def onehot_encode(i, num_words):
-    ohe = np.zeros(num_words)
-    ohe[i] = 1
-    return torch.LongTensor(ohe)
-
-
 def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
-    optimizer = optim.Adam(
+    encoder_optimizer = optim.Adam(
         encoder.parameters(),
         lr=1e-4 / 3,
         weight_decay=.00001)
@@ -103,34 +94,37 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
         lr=1e-4 / 3,
         weight_decay=.00001)
     criterion = nn.CrossEntropyLoss()
-    input_sentence = sentences[len(sentences) // 2][0]
-    label_sentence = sentences[len(sentences) // 2][1]
-    idxes = vectorize(input_sentence, word_to_idx)
-    idxes_label = vectorize(label_sentence, word_to_idx)
-    input_len = idxes.shape[0]
+    # hidden_state, cell_state = encoder.init_hidden()
 
-    hidden_state, cell_state = encoder.init_hidden()
-    for i in range(input_len):
-        out, (hidden_state, cell_state) = encoder(
-            idxes[i], hidden_state, cell_state)
+    for k in range(500):
+        hidden_state, cell_state = encoder.init_hidden()
+        encoder_optimizer.zero_grad()
+        decoder_optimizer.zero_grad()
+        input_sentence = sentences[k][0]
+        label_sentence = sentences[k][1]
+        idxes = vectorize(input_sentence, word_to_idx)
+        idxes_label = vectorize(label_sentence, word_to_idx)
+        input_len = idxes.shape[0]
+        for i in range(input_len):
+            out, (hidden_state, cell_state) = encoder(
+                idxes[i], hidden_state, cell_state)
 
-    logger.debug(f'Encoder output shape: {out.shape}, hidden state shape: {hidden_state.shape}')
+        logger.debug(f'Encoder output shape: {out.shape}, hidden state shape: {hidden_state.shape}')
 
-    decoder_input = torch.tensor([[SOS_TOKEN]], device=device)
-    decoder_hidden = hidden_state
-    decoder_cell = cell_state
-    output_len = idxes_label.shape[0]
-    loss = 0
-    for di in range(output_len):
-        decoder_output, (decoder_hidden, decoder_cell) = decoder(
-            decoder_input, decoder_hidden, decoder_cell)
-        # criterion(decoder_output, idxes_label[di])
-        loss += criterion(decoder_output, idxes_label[di].view(1))
-        decoder_input = idxes_label[di].view(1, 1)
-        print('did one...')
-    loss.backward()
-    import pdb
-    pdb.set_trace()
+        decoder_input = torch.tensor([[SOS_TOKEN]], device=device)
+        decoder_hidden = hidden_state
+        decoder_cell = cell_state
+        output_len = idxes_label.shape[0]
+        loss = 0
+        for di in range(output_len):
+            decoder_output, (decoder_hidden, decoder_cell) = decoder(
+                decoder_input, decoder_hidden, decoder_cell)
+            loss += criterion(decoder_output, idxes_label[di].view(1))
+            decoder_input = idxes_label[di].view(1, 1)
+        loss.backward()
+        encoder_optimizer.step()
+        decoder_optimizer.step()
+        logger.info(f'Current loss: {loss.item()/output_len}')
 
 
 if __name__ == '__main__':
