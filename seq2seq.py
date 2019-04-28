@@ -137,8 +137,8 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
                 decoder_input = idxes_label[di].view(1, 1)
             loss.backward()
             # gradient clipping, make max gradinent have norm 1.
-            clip_grad_norm_(encoder.parameters(), 1)
-            clip_grad_norm_(decoder.parameters(), 1)
+            # clip_grad_norm_(encoder.parameters(), 1)
+            # clip_grad_norm_(decoder.parameters(), 1)
             encoder_optimizer.step()
             decoder_optimizer.step()
             if k % 20 == 0:
@@ -147,7 +147,7 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
     logger.info(f'Took {time.time()-now} seconds to train')
     plt.plot(range(len(losses)), losses)
     # plt.show()
-    plt.savefig('foo.png')
+    plt.savefig('foo2.png')
     # import pdb; pdb.set_trace()
 
 
