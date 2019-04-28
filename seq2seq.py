@@ -40,6 +40,9 @@ class Encoder(nn.Module):
         )
 
     def forward(self, sentence_input, hidden_state, cell_state):
+        if device == 'cuda':
+            logger.info('changing sentence input to cuda...')
+            sentence_input = sentence_input.cuda()
         embedded = self.embedding(sentence_input).view(1, 1, -1)
         out, (hidden_out, cell_out) = self.LSTM(
             embedded, (hidden_state, cell_state))
