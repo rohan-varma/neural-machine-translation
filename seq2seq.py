@@ -112,8 +112,8 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
             idxes_input = vectorize(input_sentence, word_to_idx)
             idxes_label = vectorize(label_sentence, word_to_idx)
             if device == 'cuda':
-                idxes_input = idxes_input.cuda()
-                idxes_label = idxes_label.cuda()
+                idxes_input = idxes_input.to(device)
+                idxes_label = idxes_label.to(device)
             input_len = idxes_input.shape[0]
             for i in range(input_len):
                 out, (hidden_state, cell_state) = encoder(
