@@ -136,9 +136,9 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
                 loss += criterion(decoder_output, idxes_label[di].view(1))
                 decoder_input = idxes_label[di].view(1, 1)
             loss.backward()
-            # gradient clipping, make max gradinent have norm 0.5.
-            clip_grad_norm_(encoder.parameters(), 0.5)
-            clip_grad_norm_(decoder.parameters(), 0.5)
+            # gradient clipping, make max gradinent have norm 1.
+            clip_grad_norm_(encoder.parameters(), 1)
+            clip_grad_norm_(decoder.parameters(), 1)
             encoder_optimizer.step()
             decoder_optimizer.step()
             if k % 20 == 0:
