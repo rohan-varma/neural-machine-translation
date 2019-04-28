@@ -55,9 +55,14 @@ def get_data(args):
 		data_file = args.data
 		logger.info(f'Reading data from file {args.data}')
 		sentence_pairs = read_file(data_file)
-		logger.info('Filtering dataset...')
-		short_sentences = filterPairs(sentence_pairs)
+		if args.no_trim:
+			logger.info('Not filtering dataset, returning full.')
+			short_sentences = sentence_pairs
+		else:
+			logger.info('Filtering dataset...')
+			short_sentences = filterPairs(sentence_pairs)
 		logger.info(f'trimmed dataset to {len(short_sentences)}')
+		import pdb; pdb.set_trace()
 		build_word_index(short_sentences)
 		logger.info('Build word index.')
 		if args.save_processed:
