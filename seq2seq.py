@@ -83,7 +83,7 @@ class Decoder(nn.Module):
 
 
 def vectorize(sentence, word_to_idx):
-    idxes = torch.LongTensor([word_to_idx[word] for word in sentence.split()], device=device)
+    idxes = torch.LongTensor([word_to_idx[word] for word in sentence.split()])
     return idxes
 
 
@@ -111,6 +111,9 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
             label_sentence = sentences[k][1]
             idxes_input = vectorize(input_sentence, word_to_idx)
             idxes_label = vectorize(label_sentence, word_to_idx)
+            if device == 'cuda':
+                idxes_input = idxes_input.cuda()
+                idxes_label = idxes_label.cuda()
             input_len = idxes_input.shape[0]
             for i in range(input_len):
                 out, (hidden_state, cell_state) = encoder(
