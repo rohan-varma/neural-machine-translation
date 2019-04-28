@@ -9,9 +9,11 @@ import numpy as np
 import argparse
 import logging
 import sys
+import time
+import matplotlib.pyplot as plt
 
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f'Using device {device}')
@@ -95,36 +97,44 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
         weight_decay=.00001)
     criterion = nn.CrossEntropyLoss()
     # hidden_state, cell_state = encoder.init_hidden()
+    losses = []
+    n_epochs = 50
+    now = time.time()
+    for epoch in range(n_epochs):
+        # hidden_state, cell_state = encoder.init_hidden()
+        for k in range(len(sentences)):
+            hidden_state, cell_state = encoder.init_hidden()
+            encoder_optimizer.zero_grad()
+            decoder_optimizer.zero_grad()
+            input_sentence = sentences[k][0]
+            label_sentence = sentences[k][1]
+            idxes_input = vectorize(input_sentence, word_to_idx)
+            idxes_label = vectorize(label_sentence, word_to_idx)
+            input_len = idxes_input.shape[0]
+            for i in range(input_len):
+                out, (hidden_state, cell_state) = encoder(
+                    idxes_input[i], hidden_state, cell_state)
 
-    for k in range(500):
-        hidden_state, cell_state = encoder.init_hidden()
-        encoder_optimizer.zero_grad()
-        decoder_optimizer.zero_grad()
-        input_sentence = sentences[k][0]
-        label_sentence = sentences[k][1]
-        idxes = vectorize(input_sentence, word_to_idx)
-        idxes_label = vectorize(label_sentence, word_to_idx)
-        input_len = idxes.shape[0]
-        for i in range(input_len):
-            out, (hidden_state, cell_state) = encoder(
-                idxes[i], hidden_state, cell_state)
-
-        logger.debug(f'Encoder output shape: {out.shape}, hidden state shape: {hidden_state.shape}')
-
-        decoder_input = torch.tensor([[SOS_TOKEN]], device=device)
-        decoder_hidden = hidden_state
-        decoder_cell = cell_state
-        output_len = idxes_label.shape[0]
-        loss = 0
-        for di in range(output_len):
-            decoder_output, (decoder_hidden, decoder_cell) = decoder(
-                decoder_input, decoder_hidden, decoder_cell)
-            loss += criterion(decoder_output, idxes_label[di].view(1))
-            decoder_input = idxes_label[di].view(1, 1)
-        loss.backward()
-        encoder_optimizer.step()
-        decoder_optimizer.step()
-        logger.info(f'Current loss: {loss.item()/output_len}')
+            decoder_input = torch.tensor([[SOS_TOKEN]], device=device)
+            decoder_hidden = hidden_state
+            decoder_cell = cell_state
+            output_len = idxes_label.shape[0]
+            loss = 0
+            for di in range(output_len):
+                decoder_output, (decoder_hidden, decoder_cell) = decoder(
+                    decoder_input, decoder_hidden, decoder_cell)
+                loss += criterion(decoder_output, idxes_label[di].view(1))
+                decoder_input = idxes_label[di].view(1, 1)
+            loss.backward()
+            encoder_optimizer.step()
+            decoder_optimizer.step()
+            if k % 20 == 0:
+                logger.info(f'Current loss: {loss.item()/output_len}, iteration {k} out of {len(sentences)}, epoch:{epoch}')
+                losses.append(loss.item()/output_len)
+    logger.info(f'Took {time.time()-now} seconds to train')
+    plt.plot(range(len(losses)), losses)
+    plt.show()
+    import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
@@ -147,13 +157,15 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Specify this if you want to train on the full dataset instead of the trimmed version.')
+    parser.add_argument('--small', action='store_true', default=False, help='Set this is you just want to overfit a small dataset.')
     args = parser.parse_args()
     short_sentences, idx_to_word, word_to_idx = get_data(args)
-    num_words = len(idx_to_word) - 1
-    assert num_words == max(idx_to_word.keys())
-    # initialize an encoder with hidden dim of 100
-    encoder = Encoder(input_size=num_words, hidden_size=100)
+    num_words = len(idx_to_word)
+    # assert num_words == max(idx_to_word.keys())
+    # initialize an encoder with hidden dim of 500
+    encoder = Encoder(input_size=num_words, hidden_size=500)
     encoder = encoder.to(device)
 
-    decoder = Decoder(hidden_size=100, output_size=num_words)
+    decoder = Decoder(hidden_size=500, output_size=num_words)
+    decoder = decoder.to(device)
     train_model(encoder, decoder, short_sentences, word_to_idx, idx_to_word)

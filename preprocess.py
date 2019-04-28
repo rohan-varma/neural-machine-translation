@@ -61,8 +61,10 @@ def get_data(args):
 		else:
 			logger.info('Filtering dataset...')
 			short_sentences = filterPairs(sentence_pairs)
+			if args.small:
+				logger.info('Cutting dataset size down to 200.')
+				short_sentences = short_sentences[:100]
 		logger.info(f'trimmed dataset to {len(short_sentences)}')
-		import pdb; pdb.set_trace()
 		build_word_index(short_sentences)
 		logger.info('Build word index.')
 		if args.save_processed:
