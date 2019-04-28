@@ -133,8 +133,9 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
                 losses.append(loss.item()/output_len)
     logger.info(f'Took {time.time()-now} seconds to train')
     plt.plot(range(len(losses)), losses)
-    plt.show()
-    import pdb; pdb.set_trace()
+    # plt.show()
+    plt.savefig('foo.png')
+    # import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
