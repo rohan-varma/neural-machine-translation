@@ -2,6 +2,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch.nn.utils import clip_grad_norm_
 import torch.optim as optim
 from preprocess import read_file, filterPairs, build_word_index, get_data
 import pickle
@@ -82,7 +83,7 @@ class Decoder(nn.Module):
 
 
 def vectorize(sentence, word_to_idx):
-    idxes = torch.LongTensor([word_to_idx[word] for word in sentence.split()])
+    idxes = torch.LongTensor([word_to_idx[word] for word in sentence.split()], device=device)
     return idxes
 
 
@@ -126,6 +127,9 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
                 loss += criterion(decoder_output, idxes_label[di].view(1))
                 decoder_input = idxes_label[di].view(1, 1)
             loss.backward()
+            # gradient clipping, make max gradinent have norm 0.5.
+            clip_grad_norm_(encoder.parameters(), 0.5)
+            clip_grad_norm_(decoder.parameters(), 0.5)
             encoder_optimizer.step()
             decoder_optimizer.step()
             if k % 20 == 0:
