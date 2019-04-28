@@ -40,12 +40,12 @@ class Encoder(nn.Module):
         )
 
     def forward(self, sentence_input, hidden_state, cell_state):
-        if device == 'cuda':
-            logger.info('changing sentence input to cuda...')
-            sentence_input = sentence_input.cuda()
-        else:
-            logger.info('Did NOT move input to cuda.')
-        logger.info('running embedding...')
+        # if device == 'cuda':
+        #     logger.info('changing sentence input to cuda...')
+        #     sentence_input = sentence_input.cuda()
+        # else:
+        #     logger.info('Did NOT move input to cuda.')
+        # logger.info('running embedding...')
         embedded = self.embedding(sentence_input).view(1, 1, -1)
         out, (hidden_out, cell_out) = self.LSTM(
             embedded, (hidden_state, cell_state))
@@ -117,7 +117,7 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
             label_sentence = sentences[k][1]
             idxes_input = vectorize(input_sentence, word_to_idx)
             idxes_label = vectorize(label_sentence, word_to_idx)
-            if device == 'cuda':
+            if str(device) == 'cuda':
                 idxes_input = idxes_input.to(device)
                 idxes_label = idxes_label.to(device)
             input_len = idxes_input.shape[0]
