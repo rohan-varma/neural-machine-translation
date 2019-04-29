@@ -11,6 +11,7 @@ import argparse
 import logging
 import sys
 import time
+from datetime import datetime
 import matplotlib.pyplot as plt
 
 
@@ -18,6 +19,13 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f'Using device {device}')
+
+# handling seeding stuff for deterministic execution
+torch.manual_seed(0)
+if str(device) == 'cuda':
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+np.random.seed(0)
 
 # tokens to mark the start and end of the sentence
 SOS_TOKEN = 0
@@ -91,6 +99,43 @@ class Decoder(nn.Module):
 def vectorize(sentence, word_to_idx):
     idxes = torch.LongTensor([word_to_idx[word] for word in sentence.split()])
     return idxes
+
+def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
+    hidden_state, cell_state = encoder.init_hidden()
+    # encoder_optimizer.zero_grad()
+    # decoder_optimizer.zero_grad()
+    input_sentence = sentences[k][0]
+    label_sentence = sentences[k][1]
+    idxes_input = vectorize(input_sentence, word_to_idx)
+    idxes_label = vectorize(label_sentence, word_to_idx)
+    if str(device) == 'cuda':
+        idxes_input = idxes_input.to(device)
+        idxes_label = idxes_label.to(device)
+    input_len = idxes_input.shape[0]
+    for i in range(input_len):
+        out, (hidden_state, cell_state) = encoder(
+            idxes_input[i], hidden_state, cell_state)
+
+    decoder_input = torch.tensor([[SOS_TOKEN]], device=device)
+    decoder_hidden = hidden_state
+    decoder_cell = cell_state
+    output_len = idxes_label.shape[0]
+    for di in range(output_len):
+        decoder_output, (decoder_hidden, decoder_cell) = decoder(
+            decoder_input, decoder_hidden, decoder_cell)
+        decoder_input = idxes_label[di].view(1, 1)
+
+
+
+def serialize_model(model, name):
+    time_str = "".join(str(datetime.now()).split())
+    path = 'seq2seq_model_{}_{}'.format(name, time_str)
+    torch.save(model.state_dict(), path)
+
+
+def load_model(model, path):
+    model.load_state_dict(torch.load(path))
+    return model
 
 
 def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
@@ -172,6 +217,9 @@ if __name__ == '__main__':
         default=False,
         help='Specify this if you want to train on the full dataset instead of the trimmed version.')
     parser.add_argument('--small', action='store_true', default=False, help='Set this is you just want to overfit a small dataset.')
+    parser.add_argument('--save', action='store_true', default=False, help='Pass in if you want to save the model')
+    parser.add_argument('--encoder', type=str, default=None, help='path to encoder model if you want to load it, specify this with decoder as well.')
+    parser.add_argument('--decoder', type=str, default=None, help='path to decoder model if you want to load it, specify this with encoder as well.')
     args = parser.parse_args()
     short_sentences, idx_to_word, word_to_idx = get_data(args)
     num_words = len(idx_to_word)
@@ -182,4 +230,17 @@ if __name__ == '__main__':
 
     decoder = Decoder(hidden_size=500, output_size=num_words)
     decoder = decoder.to(device)
-    train_model(encoder, decoder, short_sentences, word_to_idx, idx_to_word)
+    if not (args.encoder and args.decoder):
+        train_model(encoder, decoder, short_sentences, word_to_idx, idx_to_word)
+    else:
+        logger.info('Loading model from paths {} and {}'.format(args.encoder, args.decoder))
+        encoder = load_model(encoder, args.encoder)
+        logger.info('Loaded encoder.')
+        decoder = load_model(decoder, args.decoder)
+        logger.info('Loaded decoder.')
+    if args.save:
+        logger.info('Saving model.')
+        import pdb; pdb.set_trace()
+        serialize_model(encoder, 'encoder')
+        serialize_model(decoder, 'decoder')
+
