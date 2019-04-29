@@ -74,8 +74,11 @@ class Decoder(nn.Module):
         self.embedding = nn.Embedding(
             num_embeddings=self.output_size,
             embedding_dim=self.hidden_size)
-        self.LSTM = nn.LSTM(input_size=hidden_size, hidden_size=hidden_size, bidirectional=True)
-        self.linear = nn.Linear(2*hidden_size, output_size)
+        self.LSTM = nn.LSTM(
+            input_size=hidden_size,
+            hidden_size=hidden_size,
+            bidirectional=True)
+        self.linear = nn.Linear(2 * hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, word_input, hidden_state, cell_state):
@@ -96,6 +99,7 @@ class Decoder(nn.Module):
 def vectorize(sentence, word_to_idx):
     idxes = torch.LongTensor([word_to_idx[word] for word in sentence.split()])
     return idxes
+
 
 def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
     hidden_state, cell_state = encoder.init_hidden()
@@ -143,7 +147,6 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
         print(f'Actual sentence: {actual_sentence}')
 
 
-
 def serialize_model(model, name):
     time_str = "".join(str(datetime.now()).split())
     path = 'seq2seq_model_{}_{}'.format(name, time_str)
@@ -168,6 +171,7 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
     # hidden_state, cell_state = encoder.init_hidden()
     losses = []
     n_epochs = 50
+    teacher_forcing_prob = 0.5
     now = time.time()
     for epoch in range(n_epochs):
         # hidden_state, cell_state = encoder.init_hidden()
@@ -196,7 +200,13 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
                 decoder_output, (decoder_hidden, decoder_cell) = decoder(
                     decoder_input, decoder_hidden, decoder_cell)
                 loss += criterion(decoder_output, idxes_label[di].view(1))
-                decoder_input = idxes_label[di].view(1, 1)
+                use_teacher_forcing = random.random() < 0.5
+                if use_teacher_forcing:
+                    decoder_input = idxes_label[di].view(1, 1)
+                else:
+                    # use its own output as the input
+                    _, indices = torch.max(decoder_output, 1)
+                    decoder_input = indices.view(1, 1)
             loss.backward()
             # gradient clipping, make max gradinent have norm 1.
             # clip_grad_norm_(encoder.parameters(), 1)
@@ -205,7 +215,7 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
             decoder_optimizer.step()
             if k % 20 == 0:
                 logger.info(f'Current loss: {loss.item()/output_len}, iteration {k} out of {len(sentences)}, epoch:{epoch}')
-                losses.append(loss.item()/output_len)
+                losses.append(loss.item() / output_len)
     logger.info(f'Took {time.time()-now} seconds to train')
     plt.plot(range(len(losses)), losses)
     # plt.show()
@@ -233,10 +243,26 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Specify this if you want to train on the full dataset instead of the trimmed version.')
-    parser.add_argument('--small', action='store_true', default=False, help='Set this is you just want to overfit a small dataset (will be ignored if sentences_data is passed in.')
-    parser.add_argument('--save', action='store_true', default=False, help='Pass in if you want to save the model')
-    parser.add_argument('--encoder', type=str, default=None, help='path to encoder model if you want to load it, specify this with decoder as well.')
-    parser.add_argument('--decoder', type=str, default=None, help='path to decoder model if you want to load it, specify this with encoder as well.')
+    parser.add_argument(
+        '--small',
+        action='store_true',
+        default=False,
+        help='Set this is you just want to overfit a small dataset (will be ignored if sentences_data is passed in.')
+    parser.add_argument(
+        '--save',
+        action='store_true',
+        default=False,
+        help='Pass in if you want to save the model')
+    parser.add_argument(
+        '--encoder',
+        type=str,
+        default=None,
+        help='path to encoder model if you want to load it, specify this with decoder as well.')
+    parser.add_argument(
+        '--decoder',
+        type=str,
+        default=None,
+        help='path to decoder model if you want to load it, specify this with encoder as well.')
     args = parser.parse_args()
     short_sentences, idx_to_word, word_to_idx = get_data(args)
     num_words = len(idx_to_word)
@@ -248,9 +274,16 @@ if __name__ == '__main__':
     decoder = Decoder(hidden_size=500, output_size=num_words)
     decoder = decoder.to(device)
     if not (args.encoder and args.decoder):
-        train_model(encoder, decoder, short_sentences, word_to_idx, idx_to_word)
+        train_model(
+            encoder,
+            decoder,
+            short_sentences,
+            word_to_idx,
+            idx_to_word)
     else:
-        logger.info('Loading model from paths {} and {}'.format(args.encoder, args.decoder))
+        logger.info(
+            'Loading model from paths {} and {}'.format(
+                args.encoder, args.decoder))
         encoder = load_model(encoder, args.encoder)
         logger.info('Loaded encoder.')
         decoder = load_model(decoder, args.decoder)
@@ -260,4 +293,3 @@ if __name__ == '__main__':
         serialize_model(encoder, 'encoder')
         serialize_model(decoder, 'decoder')
     predict(encoder, decoder, short_sentences, word_to_idx, idx_to_word)
-
