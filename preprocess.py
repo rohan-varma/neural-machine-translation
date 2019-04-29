@@ -6,6 +6,8 @@ import re
 import pickle
 import logging
 import sys
+import random
+random.seed(0)
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger()
@@ -65,6 +67,7 @@ def get_data(args):
 				logger.info('Cutting dataset size down to 200.')
 				short_sentences = short_sentences[:100]
 		logger.info(f'trimmed dataset to {len(short_sentences)}')
+		random.shuffle(short_sentences)
 		build_word_index(short_sentences)
 		logger.info('Build word index.')
 		if args.save_processed:

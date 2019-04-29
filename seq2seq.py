@@ -13,6 +13,7 @@ import sys
 import time
 from datetime import datetime
 import matplotlib.pyplot as plt
+import random
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -26,6 +27,7 @@ if str(device) == 'cuda':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 np.random.seed(0)
+random.seed(0)
 
 # tokens to mark the start and end of the sentence
 SOS_TOKEN = 0
@@ -45,15 +47,10 @@ class Encoder(nn.Module):
         self.LSTM = nn.LSTM(
             input_size=hidden_size,
             hidden_size=hidden_size,
+            bidirectional=True
         )
 
     def forward(self, sentence_input, hidden_state, cell_state):
-        # if device == 'cuda':
-        #     logger.info('changing sentence input to cuda...')
-        #     sentence_input = sentence_input.cuda()
-        # else:
-        #     logger.info('Did NOT move input to cuda.')
-        # logger.info('running embedding...')
         embedded = self.embedding(sentence_input).view(1, 1, -1)
         out, (hidden_out, cell_out) = self.LSTM(
             embedded, (hidden_state, cell_state))
@@ -62,8 +59,8 @@ class Encoder(nn.Module):
 
     def init_hidden(self):
         # num layers * num diretions, batch size, hidden size.
-        hidden_state = torch.zeros(1, 1, self.hidden_size, device=device)
-        cell_state = torch.zeros(1, 1, self.hidden_size, device=device)
+        hidden_state = torch.zeros(2, 1, self.hidden_size, device=device)
+        cell_state = torch.zeros(2, 1, self.hidden_size, device=device)
 
         return hidden_state, cell_state
 
@@ -77,8 +74,8 @@ class Decoder(nn.Module):
         self.embedding = nn.Embedding(
             num_embeddings=self.output_size,
             embedding_dim=self.hidden_size)
-        self.LSTM = nn.LSTM(input_size=hidden_size, hidden_size=hidden_size)
-        self.linear = nn.Linear(hidden_size, output_size)
+        self.LSTM = nn.LSTM(input_size=hidden_size, hidden_size=hidden_size, bidirectional=True)
+        self.linear = nn.Linear(2*hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, word_input, hidden_state, cell_state):
@@ -91,8 +88,8 @@ class Decoder(nn.Module):
 
     def init_hidden(self):
         # num layers * num diretions, batch size, hidden size.
-        hidden_state = torch.zeros(1, 1, self.hidden_size, device=device)
-        cell_state = torch.zeros(1, 1, self.hidden_size, device=device)
+        hidden_state = torch.zeros(2, 1, self.hidden_size, device=device)
+        cell_state = torch.zeros(2, 1, self.hidden_size, device=device)
         return hidden_state, cell_state
 
 
@@ -104,26 +101,45 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
     hidden_state, cell_state = encoder.init_hidden()
     # encoder_optimizer.zero_grad()
     # decoder_optimizer.zero_grad()
-    input_sentence = sentences[k][0]
-    label_sentence = sentences[k][1]
-    idxes_input = vectorize(input_sentence, word_to_idx)
-    idxes_label = vectorize(label_sentence, word_to_idx)
-    if str(device) == 'cuda':
-        idxes_input = idxes_input.to(device)
-        idxes_label = idxes_label.to(device)
-    input_len = idxes_input.shape[0]
-    for i in range(input_len):
-        out, (hidden_state, cell_state) = encoder(
-            idxes_input[i], hidden_state, cell_state)
+    for k in range(len(sentences)):
+        input_sentence = sentences[k][0]
+        label_sentence = sentences[k][1]
+        idxes_input = vectorize(input_sentence, word_to_idx)
+        idxes_label = vectorize(label_sentence, word_to_idx)
+        if str(device) == 'cuda':
+            idxes_input = idxes_input.to(device)
+            idxes_label = idxes_label.to(device)
+        input_len = idxes_input.shape[0]
+        for i in range(input_len):
+            out, (hidden_state, cell_state) = encoder(
+                idxes_input[i], hidden_state, cell_state)
 
-    decoder_input = torch.tensor([[SOS_TOKEN]], device=device)
-    decoder_hidden = hidden_state
-    decoder_cell = cell_state
-    output_len = idxes_label.shape[0]
-    for di in range(output_len):
-        decoder_output, (decoder_hidden, decoder_cell) = decoder(
-            decoder_input, decoder_hidden, decoder_cell)
-        decoder_input = idxes_label[di].view(1, 1)
+        decoder_input = torch.tensor([[SOS_TOKEN]], device=device)
+        decoder_hidden = hidden_state
+        decoder_cell = cell_state
+        output_len = idxes_label.shape[0]
+        predicted_words = []
+        actual_words = []
+        for di in range(output_len):
+            decoder_output, (decoder_hidden, decoder_cell) = decoder(
+                decoder_input, decoder_hidden, decoder_cell)
+            # decoder_input = idxes_label[di].view(1, 1)
+            actual_idx = idxes_label[di].view(1, 1).item()
+            actual_word = idx_to_word[actual_idx]
+            actual_words.append(actual_word)
+            _, indices = torch.max(decoder_output, 1)
+            decoder_input = indices.view(1, 1)
+            prediction_idx = indices.item()
+            predicted_word = idx_to_word[prediction_idx]
+            if predicted_word == EOS_TOKEN:
+                break
+            predicted_words.append(predicted_word)
+        print(predicted_words)
+        print(actual_words)
+        predicted_sentence = " ".join(predicted_words)
+        actual_sentence = " ".join(actual_words)
+        print(f'Predicted sentence: {predicted_sentence}')
+        print(f'Actual sentence: {actual_sentence}')
 
 
 
@@ -216,7 +232,7 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Specify this if you want to train on the full dataset instead of the trimmed version.')
-    parser.add_argument('--small', action='store_true', default=False, help='Set this is you just want to overfit a small dataset.')
+    parser.add_argument('--small', action='store_true', default=False, help='Set this is you just want to overfit a small dataset (will be ignored if sentences_data is passed in.')
     parser.add_argument('--save', action='store_true', default=False, help='Pass in if you want to save the model')
     parser.add_argument('--encoder', type=str, default=None, help='path to encoder model if you want to load it, specify this with decoder as well.')
     parser.add_argument('--decoder', type=str, default=None, help='path to decoder model if you want to load it, specify this with encoder as well.')
@@ -243,4 +259,5 @@ if __name__ == '__main__':
         import pdb; pdb.set_trace()
         serialize_model(encoder, 'encoder')
         serialize_model(decoder, 'decoder')
+    predict(encoder, decoder, short_sentences, word_to_idx, idx_to_word)
 
