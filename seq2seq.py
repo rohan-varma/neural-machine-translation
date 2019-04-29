@@ -138,8 +138,6 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
             if predicted_word == EOS_TOKEN:
                 break
             predicted_words.append(predicted_word)
-        print(predicted_words)
-        print(actual_words)
         predicted_sentence = " ".join(predicted_words)
         actual_sentence = " ".join(actual_words)
         print(f'The original sentence: {input_sentence}')
@@ -216,6 +214,7 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
             if k % 20 == 0:
                 logger.info(f'Current loss: {loss.item()/output_len}, iteration {k} out of {len(sentences)}, epoch:{epoch}')
                 losses.append(loss.item() / output_len)
+                predict(encoder, decoder, [sentences[k]], word_to_idx, idx_to_word)
     logger.info(f'Took {time.time()-now} seconds to train')
     plt.plot(range(len(losses)), losses)
     # plt.show()
