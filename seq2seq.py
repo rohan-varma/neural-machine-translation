@@ -171,7 +171,7 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
     # hidden_state, cell_state = encoder.init_hidden()
     losses = []
     n_epochs = 50
-    teacher_forcing_prob = 0.5
+    teacher_forcing_prob = 0.1
     now = time.time()
     for epoch in range(n_epochs):
         # hidden_state, cell_state = encoder.init_hidden()
@@ -200,7 +200,7 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
                 decoder_output, (decoder_hidden, decoder_cell) = decoder(
                     decoder_input, decoder_hidden, decoder_cell)
                 loss += criterion(decoder_output, idxes_label[di].view(1))
-                use_teacher_forcing = random.random() < 0.5
+                use_teacher_forcing = random.random() < teacher_forcing_prob
                 if use_teacher_forcing:
                     decoder_input = idxes_label[di].view(1, 1)
                 else:
