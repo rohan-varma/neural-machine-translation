@@ -138,6 +138,7 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
         print(actual_words)
         predicted_sentence = " ".join(predicted_words)
         actual_sentence = " ".join(actual_words)
+        print(f'The original sentence: {input_sentence}')
         print(f'Predicted sentence: {predicted_sentence}')
         print(f'Actual sentence: {actual_sentence}')
 
@@ -150,7 +151,7 @@ def serialize_model(model, name):
 
 
 def load_model(model, path):
-    model.load_state_dict(torch.load(path))
+    model.load_state_dict(torch.load(path, map_location=str(device)))
     return model
 
 
