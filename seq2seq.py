@@ -256,7 +256,6 @@ if __name__ == '__main__':
         logger.info('Loaded decoder.')
     if args.save:
         logger.info('Saving model.')
-        import pdb; pdb.set_trace()
         serialize_model(encoder, 'encoder')
         serialize_model(decoder, 'decoder')
     predict(encoder, decoder, short_sentences, word_to_idx, idx_to_word)
