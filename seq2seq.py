@@ -172,6 +172,12 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
     teacher_forcing_prob = 0.1
     now = time.time()
     for epoch in range(n_epochs):
+        # every even epoch, save the model just in case we have to stop
+        # training for some reason...
+        if epoch != 0 and epoch % 2 == 0:
+            serialize_model(encoder, 'encoder_checkpoint_{}'.format(epoch))
+            serialize_model(decoder, 'decoder_checkpoint_{}'.format(epoch))
+            logger.info('Serialized models for epoch {}'.format(epoch))
         # hidden_state, cell_state = encoder.init_hidden()
         for k in range(len(sentences)):
             hidden_state, cell_state = encoder.init_hidden()
@@ -214,7 +220,9 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
             if k % 20 == 0:
                 logger.info(f'Current loss: {loss.item()/output_len}, iteration {k} out of {len(sentences)}, epoch:{epoch}')
                 losses.append(loss.item() / output_len)
-                predict(encoder, decoder, [sentences[k]], word_to_idx, idx_to_word)
+                predict(
+                    encoder, decoder, [
+                        sentences[k]], word_to_idx, idx_to_word)
     logger.info(f'Took {time.time()-now} seconds to train')
     plt.plot(range(len(losses)), losses)
     # plt.show()
