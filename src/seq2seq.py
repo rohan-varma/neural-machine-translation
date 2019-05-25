@@ -16,12 +16,14 @@ import matplotlib.pyplot as plt
 import random
 
 
+
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f'Using device {device}')
 
 # handling seeding stuff for deterministic execution
+
 torch.manual_seed(0)
 if str(device) == 'cuda':
     torch.backends.cudnn.deterministic = True
@@ -58,7 +60,7 @@ class Encoder(nn.Module):
         return out, (hidden_out, cell_out)
 
     def init_hidden(self):
-        # num layers * num diretions, batch size, hidden size.
+        # num layers * num directions, batch size, hidden size.
         hidden_state = torch.zeros(2, 1, self.hidden_size, device=device)
         cell_state = torch.zeros(2, 1, self.hidden_size, device=device)
 
@@ -103,8 +105,6 @@ def vectorize(sentence, word_to_idx):
 
 def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
     hidden_state, cell_state = encoder.init_hidden()
-    # encoder_optimizer.zero_grad()
-    # decoder_optimizer.zero_grad()
     for k in range(len(sentences)):
         input_sentence = sentences[k][0]
         label_sentence = sentences[k][1]
@@ -249,7 +249,7 @@ if __name__ == '__main__':
         '--no_trim',
         action='store_true',
         default=False,
-        help='Specify this if you want to train on the full dataset instead of the trimmed version.')
+        help='Specify this if you want to train on the full dataset instead of the trimmed version (ignored if sentences_data is passed in.')
     parser.add_argument(
         '--small',
         action='store_true',
@@ -288,6 +288,7 @@ if __name__ == '__main__':
             word_to_idx,
             idx_to_word)
     else:
+        # assert that both an encoder and decoder path should be passed in
         logger.info(
             'Loading model from paths {} and {}'.format(
                 args.encoder, args.decoder))
@@ -299,4 +300,5 @@ if __name__ == '__main__':
         logger.info('Saving model.')
         serialize_model(encoder, 'encoder')
         serialize_model(decoder, 'decoder')
+    logger.info('Predicting on {} sentences'.format(len(short_sentences)))
     predict(encoder, decoder, short_sentences, word_to_idx, idx_to_word)
