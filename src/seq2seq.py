@@ -75,11 +75,14 @@ class Decoder(nn.Module):
         self.output_size = output_size
         self.embedding = nn.Embedding(
             num_embeddings=self.output_size,
-            embedding_dim=self.hidden_size)
+            embedding_dim=self.hidden_size
+            )
         self.LSTM = nn.LSTM(
             input_size=hidden_size,
             hidden_size=hidden_size,
-            bidirectional=True)
+            bidirectional=True
+            )
+        # 2 * hidden size only if bidirectional, otherwise just hidden_size should be used.
         self.linear = nn.Linear(2 * hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
@@ -95,7 +98,7 @@ class Decoder(nn.Module):
         # num layers * num diretions, batch size, hidden size.
         hidden_state = torch.zeros(2, 1, self.hidden_size, device=device)
         cell_state = torch.zeros(2, 1, self.hidden_size, device=device)
-        return hidden_state, cell_state
+        return hidden_state, cell_state # these are returned from forward, so they get updated when passed back into forward.
 
 
 def vectorize(sentence, word_to_idx):
@@ -168,7 +171,7 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
     criterion = nn.CrossEntropyLoss()
     # hidden_state, cell_state = encoder.init_hidden()
     losses = []
-    n_epochs = 50
+    n_epochs = 20
     teacher_forcing_prob = 0.1
     now = time.time()
     for epoch in range(n_epochs):
@@ -185,6 +188,7 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
             decoder_optimizer.zero_grad()
             input_sentence = sentences[k][0]
             label_sentence = sentences[k][1]
+
             idxes_input = vectorize(input_sentence, word_to_idx)
             idxes_label = vectorize(label_sentence, word_to_idx)
             if str(device) == 'cuda':
@@ -227,7 +231,6 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
     plt.plot(range(len(losses)), losses)
     # plt.show()
     plt.savefig('foo2.png')
-    # import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
@@ -280,6 +283,7 @@ if __name__ == '__main__':
 
     decoder = Decoder(hidden_size=500, output_size=num_words)
     decoder = decoder.to(device)
+
     if not (args.encoder and args.decoder):
         train_model(
             encoder,
