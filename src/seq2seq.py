@@ -43,6 +43,7 @@ class Encoder(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bidirectional = bidirectional
+        self.num_layers = 2
         # we want an embedding matrix of num_total_words * dim_for_each_word
         self.embedding = nn.Embedding(
             num_embeddings=self.input_size,
@@ -50,6 +51,7 @@ class Encoder(nn.Module):
         self.LSTM = nn.LSTM(
             input_size=hidden_size,
             hidden_size=hidden_size,
+            num_layers=self.num_layers,
             bidirectional=self.bidirectional
         )
 
@@ -63,8 +65,9 @@ class Encoder(nn.Module):
     def init_hidden(self):
         # num layers * num directions, batch size, hidden size.
         num_directions = 2 if self.bidirectional else 1
-        hidden_state = torch.zeros(num_directions, 1, self.hidden_size, device=device)
-        cell_state = torch.zeros(num_directions, 1, self.hidden_size, device=device)
+        num_layers = self.num_layers
+        hidden_state = torch.zeros(num_directions * num_layers, 1, self.hidden_size, device=device)
+        cell_state = torch.zeros(num_directions * num_layers, 1, self.hidden_size, device=device)
 
         return hidden_state, cell_state
 
@@ -76,6 +79,7 @@ class Decoder(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.bidirectional = bidirectional
+        self.num_layers = 2
         self.embedding = nn.Embedding(
             num_embeddings=self.output_size,
             embedding_dim=self.hidden_size
@@ -83,6 +87,7 @@ class Decoder(nn.Module):
         self.LSTM = nn.LSTM(
             input_size=hidden_size,
             hidden_size=hidden_size,
+            num_layers=self.num_layers,
             bidirectional=self.bidirectional
             )
         # 2 * hidden size only if bidirectional, otherwise just hidden_size should be used.
@@ -98,11 +103,14 @@ class Decoder(nn.Module):
         out = self.softmax(self.linear(out[0]))
         return out, (hidden_state, cell_state)
 
+    # this function is never called, is it really needed? the decoder gets pre-initialized hidden and cell states from the encoder.
+    #TODO might be needed if we are just using the decoder alone?
     def init_hidden(self):
         # num layers * num diretions, batch size, hidden size.
         num_directions = 2 if self.bidirectional else 1
-        hidden_state = torch.zeros(num_directions, 1, self.hidden_size, device=device)
-        cell_state = torch.zeros(num_directions, 1, self.hidden_size, device=device)
+        num_layers = self.num_layers
+        hidden_state = torch.zeros(num_directions * 999, 1, self.hidden_size, device=device)
+        cell_state = torch.zeros(num_directions * num_layers, 1, self.hidden_size, device=device)
         return hidden_state, cell_state # these are returned from forward, so they get updated when passed back into forward.
 
 
