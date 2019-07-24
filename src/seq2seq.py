@@ -38,10 +38,11 @@ EOS_TOKEN = 1
 
 class Encoder(nn.Module):
 
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, bidirectional=True):
         super(Encoder, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.bidirectional = bidirectional
         # we want an embedding matrix of num_total_words * dim_for_each_word
         self.embedding = nn.Embedding(
             num_embeddings=self.input_size,
@@ -49,7 +50,7 @@ class Encoder(nn.Module):
         self.LSTM = nn.LSTM(
             input_size=hidden_size,
             hidden_size=hidden_size,
-            bidirectional=True
+            bidirectional=self.bidirectional
         )
 
     def forward(self, sentence_input, hidden_state, cell_state):
@@ -61,18 +62,20 @@ class Encoder(nn.Module):
 
     def init_hidden(self):
         # num layers * num directions, batch size, hidden size.
-        hidden_state = torch.zeros(2, 1, self.hidden_size, device=device)
-        cell_state = torch.zeros(2, 1, self.hidden_size, device=device)
+        num_directions = 2 if self.bidirectional else 1
+        hidden_state = torch.zeros(num_directions, 1, self.hidden_size, device=device)
+        cell_state = torch.zeros(num_directions, 1, self.hidden_size, device=device)
 
         return hidden_state, cell_state
 
 
 class Decoder(nn.Module):
 
-    def __init__(self, hidden_size, output_size):
+    def __init__(self, hidden_size, output_size, bidirectional=True):
         super(Decoder, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
+        self.bidirectional = bidirectional
         self.embedding = nn.Embedding(
             num_embeddings=self.output_size,
             embedding_dim=self.hidden_size
@@ -80,10 +83,11 @@ class Decoder(nn.Module):
         self.LSTM = nn.LSTM(
             input_size=hidden_size,
             hidden_size=hidden_size,
-            bidirectional=True
+            bidirectional=self.bidirectional
             )
         # 2 * hidden size only if bidirectional, otherwise just hidden_size should be used.
-        self.linear = nn.Linear(2 * hidden_size, output_size)
+        num_directions = 2 if self.bidirectional else 1
+        self.linear = nn.Linear(num_directions * hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, word_input, hidden_state, cell_state):
@@ -96,8 +100,9 @@ class Decoder(nn.Module):
 
     def init_hidden(self):
         # num layers * num diretions, batch size, hidden size.
-        hidden_state = torch.zeros(2, 1, self.hidden_size, device=device)
-        cell_state = torch.zeros(2, 1, self.hidden_size, device=device)
+        num_directions = 2 if self.bidirectional else 1
+        hidden_state = torch.zeros(num_directions, 1, self.hidden_size, device=device)
+        cell_state = torch.zeros(num_directions, 1, self.hidden_size, device=device)
         return hidden_state, cell_state # these are returned from forward, so they get updated when passed back into forward.
 
 
