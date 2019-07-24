@@ -109,7 +109,7 @@ class Decoder(nn.Module):
         # num layers * num diretions, batch size, hidden size.
         num_directions = 2 if self.bidirectional else 1
         num_layers = self.num_layers
-        hidden_state = torch.zeros(num_directions * 999, 1, self.hidden_size, device=device)
+        hidden_state = torch.zeros(num_directions * num_layers, 1, self.hidden_size, device=device)
         cell_state = torch.zeros(num_directions * num_layers, 1, self.hidden_size, device=device)
         return hidden_state, cell_state # these are returned from forward, so they get updated when passed back into forward.
 
