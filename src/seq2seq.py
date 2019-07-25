@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 import matplotlib.pyplot as plt
 import random
+from evaluate import build_reference_dict
 from sklearn.model_selection import train_test_split
 
 
@@ -178,6 +179,7 @@ def beam_search_predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
 
 
 def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
+    predictions = []
     for k in range(len(sentences)):
         hidden_state, cell_state = encoder.init_hidden()
         input_sentence = sentences[k][0]
@@ -218,6 +220,8 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
         logger.info(f'The original sentence: {input_sentence}')
         logger.info(f'Predicted sentence: {predicted_sentence}')
         logger.info(f'Actual sentence: {actual_sentence}')
+        predictions.append((input_sentence, predicted_sentence))
+    return predictions
 
 
 def serialize_model(model, name):
@@ -360,6 +364,8 @@ if __name__ == '__main__':
     decoder = Decoder(hidden_size=500, output_size=num_words)
     decoder = decoder.to(device)
 
+    import pdb; pdb.set_trace()
+
     if not (args.encoder and args.decoder):
         train_model(
             encoder,
@@ -381,4 +387,9 @@ if __name__ == '__main__':
         serialize_model(encoder, 'encoder')
         serialize_model(decoder, 'decoder')
     logger.info('Predicting on {} sentences'.format(len(test_sentences)))
-    predict(encoder, decoder, test_sentences, word_to_idx, idx_to_word)
+    predictions = predict(encoder, decoder, test_sentences, word_to_idx, idx_to_word)
+
+    # evaluation using BLEU metric
+    ref_dict = build_reference_dict(test_sentences)
+
+
