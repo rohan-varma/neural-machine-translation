@@ -181,8 +181,8 @@ def beam_search_predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
 
 
 def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
-    hidden_state, cell_state = encoder.init_hidden()
     for k in range(len(sentences)):
+        hidden_state, cell_state = encoder.init_hidden()
         input_sentence = sentences[k][0]
         label_sentence = sentences[k][1]
         idxes_input = vectorize(input_sentence, word_to_idx)
@@ -301,8 +301,8 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
                 predict(
                     encoder, decoder, [
                         sentences[k]], word_to_idx, idx_to_word)
-                print('PREDICTING WITH BEAM SEARCH')
-                beam_search_predict(encoder, decoder, [sentences[k]], word_to_idx, idx_to_word)
+                # print('PREDICTING WITH BEAM SEARCH')
+                # beam_search_predict(encoder, decoder, [sentences[k]], word_to_idx, idx_to_word)
     logger.info(f'Took {time.time()-now} seconds to train')
     plt.plot(range(len(losses)), losses)
     # plt.show()
