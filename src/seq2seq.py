@@ -119,7 +119,15 @@ def vectorize(sentence, word_to_idx):
     return idxes
 
 
+def choose_top_k_prob(all_candidates, top_k_to_choose):
+    # list whose elements are a list giving the prediction info
+    # each element of the sublist is a probability, idx pair.
+    # compute the top k which have the highest.
+    all_candidates = sorted(all_candidates, key = lambda candidate: sum([prob for (prob, idx) in candidate]))
+    return all_candidates[len(all_candidates) - top_k_to_choose:]
+
 def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
+    beam_search_k = 5
     hidden_state, cell_state = encoder.init_hidden()
     for k in range(len(sentences)):
         input_sentence = sentences[k][0]
@@ -140,6 +148,40 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
         output_len = idxes_label.shape[0]
         predicted_words = []
         actual_words = []
+
+        # beam search prediction code
+        # run one iteration, to generate the initial k words
+        k_most_likely = []
+        decoder_output, (decoder_hidden, decoder_cell) = decoder(decoder_input, decoder_hidden, decoder_cell)
+        values, indices = torch.topk(decoder_output, k=beam_search_k, dim=1)
+        values, indices = values.view(values.shape[1]).tolist(), indices.view(indices.shape[1]).tolist()
+        k_most_likely = [[(value, i)] for (value, i) in zip(values, indices)]
+        for di in range(output_len-1):
+            all_candidates = []
+            for candidate in k_most_likely:
+                prob, idx = candidate[-1]
+                decoder_input = torch.LongTensor([idx]).view(1,1)
+                decoder_output, (decoder_hidden, decoder_cell) = decoder(decoder_input, decoder_hidden, decoder_cell)
+                decoder_output = decoder_output.view(decoder_output.shape[1]).tolist()
+                for idx, prob in enumerate(decoder_output):
+                    new_cand = candidate + [(prob, idx)]
+                    print(len(new_cand), di + 2)
+                    all_candidates.append(new_cand)
+            top_k = choose_top_k_prob(all_candidates, top_k_to_choose=beam_search_k)
+            k_most_likely = top_k
+        beam_searched_prediction = max(k_most_likely, key=lambda li: sum([prob for (prob, i) in li]))
+        #TODO: now with the beam searched prediction, read off the indices and produce the corresponding words as the prediciton.
+        
+
+                # now, for every possible output, that plus any of the k translations is a new possible translation. add this to candidate translations.
+            # now, prune all_candidates by computing the k most probable.
+
+            # for each of the k, feed that index as the input
+        # if not k_most_likely:
+        #         values, indices = torch.topk(decoder_output, k=beam_search_k, dim=1)
+        #         values, indices = values.view(values.shape[1]).tolist(), indices.view(indices.shape[1]).tolist()
+        #         k_most_likely = [(value, i) for (value, i) in zip(values, indices)]
+        #     else:
         for di in range(output_len):
             decoder_output, (decoder_hidden, decoder_cell) = decoder(
                 decoder_input, decoder_hidden, decoder_cell)
