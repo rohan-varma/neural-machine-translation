@@ -126,7 +126,7 @@ def choose_top_k_prob(all_candidates, top_k_to_choose):
     all_candidates = sorted(all_candidates, key = lambda candidate: sum([prob for (prob, idx) in candidate]))
     return all_candidates[len(all_candidates) - top_k_to_choose:]
 
-def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
+def beam_search_predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
     beam_search_k = 5
     hidden_state, cell_state = encoder.init_hidden()
     for k in range(len(sentences)):
@@ -157,6 +157,9 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
         values, indices = values.view(values.shape[1]).tolist(), indices.view(indices.shape[1]).tolist()
         k_most_likely = [[(value, i)] for (value, i) in zip(values, indices)]
         for di in range(output_len-1):
+            actual_idx = idxes_label[di].view(1, 1).item()
+            actual_word = idx_to_word[actual_idx]
+            actual_words.append(actual_word)
             all_candidates = []
             for candidate in k_most_likely:
                 prob, idx = candidate[-1]
@@ -165,23 +168,42 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
                 decoder_output = decoder_output.view(decoder_output.shape[1]).tolist()
                 for idx, prob in enumerate(decoder_output):
                     new_cand = candidate + [(prob, idx)]
-                    print(len(new_cand), di + 2)
                     all_candidates.append(new_cand)
             top_k = choose_top_k_prob(all_candidates, top_k_to_choose=beam_search_k)
             k_most_likely = top_k
         beam_searched_prediction = max(k_most_likely, key=lambda li: sum([prob for (prob, i) in li]))
         #TODO: now with the beam searched prediction, read off the indices and produce the corresponding words as the prediciton.
+        indices = [i for (_, i) in beam_searched_prediction]
+        predicted_sentence = " ".join([idx_to_word[i] for i in indices])
+        actual_sentence = " ".join(actual_words)
+        print(f'The original sentence: {input_sentence}')
+        print(f'Predicted sentence: {predicted_sentence}')
+        print(f'Actual sentence: {actual_sentence}')
+
+
+def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
+    hidden_state, cell_state = encoder.init_hidden()
+    for k in range(len(sentences)):
+        input_sentence = sentences[k][0]
+        label_sentence = sentences[k][1]
+        idxes_input = vectorize(input_sentence, word_to_idx)
+        idxes_label = vectorize(label_sentence, word_to_idx)
+        if str(device) == 'cuda':
+            idxes_input = idxes_input.to(device)
+            idxes_label = idxes_label.to(device)
+        input_len = idxes_input.shape[0]
+        for i in range(input_len):
+            out, (hidden_state, cell_state) = encoder(
+                idxes_input[i], hidden_state, cell_state)
+
+        decoder_input = torch.tensor([[SOS_TOKEN]], device=device)
+        decoder_hidden = hidden_state
+        decoder_cell = cell_state
+        output_len = idxes_label.shape[0]
+        predicted_words = []
+        actual_words = []
+
         
-
-                # now, for every possible output, that plus any of the k translations is a new possible translation. add this to candidate translations.
-            # now, prune all_candidates by computing the k most probable.
-
-            # for each of the k, feed that index as the input
-        # if not k_most_likely:
-        #         values, indices = torch.topk(decoder_output, k=beam_search_k, dim=1)
-        #         values, indices = values.view(values.shape[1]).tolist(), indices.view(indices.shape[1]).tolist()
-        #         k_most_likely = [(value, i) for (value, i) in zip(values, indices)]
-        #     else:
         for di in range(output_len):
             decoder_output, (decoder_hidden, decoder_cell) = decoder(
                 decoder_input, decoder_hidden, decoder_cell)
@@ -282,6 +304,8 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
                 predict(
                     encoder, decoder, [
                         sentences[k]], word_to_idx, idx_to_word)
+                print('PREDICTING WITH BEAM SEARCH')
+                beam_search_predict(encoder, decoder, [sentences[k]], word_to_idx, idx_to_word)
     logger.info(f'Took {time.time()-now} seconds to train')
     plt.plot(range(len(losses)), losses)
     # plt.show()
