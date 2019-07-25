@@ -4,7 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 import torch.optim as optim
-from preprocess import read_file, filterPairs, build_word_index, get_data
+from preprocess import read_file, filterPairs, build_word_index, get_data, SOS_TOKEN, EOS_TOKEN
 import pickle
 import numpy as np
 import argparse
@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 import matplotlib.pyplot as plt
 import random
+from sklearn.model_selection import train_test_split
 
 
 
@@ -30,10 +31,6 @@ if str(device) == 'cuda':
     torch.backends.cudnn.benchmark = False
 np.random.seed(0)
 random.seed(0)
-
-# tokens to mark the start and end of the sentence
-SOS_TOKEN = 0
-EOS_TOKEN = 1
 
 
 class Encoder(nn.Module):
@@ -351,6 +348,9 @@ if __name__ == '__main__':
         help='path to decoder model if you want to load it, specify this with encoder as well.')
     args = parser.parse_args()
     short_sentences, idx_to_word, word_to_idx = get_data(args)
+
+    # split the data, train on train set, test on test set.
+    train_sentences, test_sentences = train_test_split(short_sentences, train_size=0.8)
     num_words = len(idx_to_word)
     # assert num_words == max(idx_to_word.keys())
     # initialize an encoder with hidden dim of 500
@@ -364,7 +364,7 @@ if __name__ == '__main__':
         train_model(
             encoder,
             decoder,
-            short_sentences,
+            train_sentences,
             word_to_idx,
             idx_to_word)
     else:
@@ -380,5 +380,5 @@ if __name__ == '__main__':
         logger.info('Saving model.')
         serialize_model(encoder, 'encoder')
         serialize_model(decoder, 'decoder')
-    logger.info('Predicting on {} sentences'.format(len(short_sentences)))
-    predict(encoder, decoder, short_sentences, word_to_idx, idx_to_word)
+    logger.info('Predicting on {} sentences'.format(len(test_sentences)))
+    predict(encoder, decoder, test_sentences, word_to_idx, idx_to_word)

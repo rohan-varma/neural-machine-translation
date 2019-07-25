@@ -29,7 +29,7 @@ def normalize_string(s):
     return s
 
 
-MAX_LENGTH = 10
+MAX_LENGTH = 10 # change this to allow for longer or shorter sentences to be translated.
 # tokens to mark the start and end of the sentence
 SOS_TOKEN = 0
 EOS_TOKEN = 1
