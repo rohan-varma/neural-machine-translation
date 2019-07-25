@@ -162,7 +162,7 @@ def beam_search_predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
             all_candidates = []
             for candidate in k_most_likely:
                 prob, idx = candidate[-1]
-                decoder_input = torch.LongTensor([idx], device=device).view(1,1)
+                decoder_input = torch.tensor([idx], device=device).view(1,1)
                 decoder_output, (decoder_hidden, decoder_cell) = decoder(decoder_input, decoder_hidden, decoder_cell)
                 decoder_output = decoder_output.view(decoder_output.shape[1]).tolist()
                 for idx, prob in enumerate(decoder_output):
