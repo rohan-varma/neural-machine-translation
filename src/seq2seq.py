@@ -38,12 +38,12 @@ EOS_TOKEN = 1
 
 class Encoder(nn.Module):
 
-    def __init__(self, input_size, hidden_size, bidirectional=True):
+    def __init__(self, input_size, hidden_size, bidirectional=True, num_layers=2):
         super(Encoder, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bidirectional = bidirectional
-        self.num_layers = 2
+        self.num_layers = num_layers
         # we want an embedding matrix of num_total_words * dim_for_each_word
         self.embedding = nn.Embedding(
             num_embeddings=self.input_size,
@@ -74,12 +74,12 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
 
-    def __init__(self, hidden_size, output_size, bidirectional=True):
+    def __init__(self, hidden_size, output_size, bidirectional=True, num_layers=2):
         super(Decoder, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.bidirectional = bidirectional
-        self.num_layers = 2
+        self.num_layers = num_layers
         self.embedding = nn.Embedding(
             num_embeddings=self.output_size,
             embedding_dim=self.hidden_size

@@ -141,8 +141,6 @@ Output: a fixed-length vector $$ c $$. Often computing by applying a function to
 
 
 
-
-
 ##### Visualizing attention weights
 
 - The following figure shows the attention weights that were learned for some example sentence translation pairs. We see that in many cases the weights on the diagonal are more pronounced, since the source word at that index corresponds closely to the same index in the translated word
