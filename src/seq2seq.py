@@ -134,8 +134,9 @@ def beam_search_predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
         label_sentence = sentences[k][1]
         idxes_input = vectorize(input_sentence, word_to_idx)
         idxes_label = vectorize(label_sentence, word_to_idx)
-        idxes_input = idxes_input.to(device)
-        idxes_label = idxes_label.to(device)
+        if str(device) == 'cuda':
+            idxes_input = idxes_input.to(device)
+            idxes_label = idxes_label.to(device)
         input_len = idxes_input.shape[0]
         for i in range(input_len):
             out, (hidden_state, cell_state) = encoder(
@@ -187,9 +188,9 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
         label_sentence = sentences[k][1]
         idxes_input = vectorize(input_sentence, word_to_idx)
         idxes_label = vectorize(label_sentence, word_to_idx)
-        #TODO: can probably remove the check here, since .to(cpu) should be fine if we're training on cpu?
-        idxes_input = idxes_input.to(device)
-        idxes_label = idxes_label.to(device)
+        if str(device) == 'cuda':
+            idxes_input = idxes_input.to(device)
+            idxes_label = idxes_label.to(device)
         input_len = idxes_input.shape[0]
         for i in range(input_len):
             out, (hidden_state, cell_state) = encoder(
@@ -267,8 +268,9 @@ def train_model(encoder, decoder, sentences, word_to_idx, idx_to_word):
 
             idxes_input = vectorize(input_sentence, word_to_idx)
             idxes_label = vectorize(label_sentence, word_to_idx)
-            idxes_input = idxes_input.to(device)
-            idxes_label = idxes_label.to(device)
+            if str(device) == 'cuda':
+                idxes_input = idxes_input.to(device)
+                idxes_label = idxes_label.to(device)
             input_len = idxes_input.shape[0]
             for i in range(input_len):
                 out, (hidden_state, cell_state) = encoder(
