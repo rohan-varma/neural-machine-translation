@@ -175,9 +175,9 @@ def beam_search_predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
         indices = [i for (_, i) in beam_searched_prediction]
         predicted_sentence = " ".join([idx_to_word[i] for i in indices])
         actual_sentence = " ".join(actual_words)
-        print(f'The original sentence: {input_sentence}')
-        print(f'Predicted sentence: {predicted_sentence}')
-        print(f'Actual sentence: {actual_sentence}')
+        logger.info(f'The original sentence: {input_sentence}')
+        logger.info(f'Predicted sentence: {predicted_sentence}')
+        logger.info(f'Actual sentence: {actual_sentence}')
 
 
 def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
@@ -218,9 +218,9 @@ def predict(encoder, decoder, sentences, word_to_idx, idx_to_word):
             predicted_words.append(predicted_word)
         predicted_sentence = " ".join(predicted_words)
         actual_sentence = " ".join(actual_words)
-        print(f'The original sentence: {input_sentence}')
-        print(f'Predicted sentence: {predicted_sentence}')
-        print(f'Actual sentence: {actual_sentence}')
+        logger.info(f'The original sentence: {input_sentence}')
+        logger.info(f'Predicted sentence: {predicted_sentence}')
+        logger.info(f'Actual sentence: {actual_sentence}')
 
 
 def serialize_model(model, name):
