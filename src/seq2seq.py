@@ -358,13 +358,11 @@ if __name__ == '__main__':
     num_words = len(idx_to_word)
     # assert num_words == max(idx_to_word.keys())
     # initialize an encoder with hidden dim of 500
-    encoder = Encoder(input_size=num_words, hidden_size=500)
+    encoder = Encoder(input_size=num_words, hidden_size=500, num_layers=1)
     encoder = encoder.to(device)
 
-    decoder = Decoder(hidden_size=500, output_size=num_words)
+    decoder = Decoder(hidden_size=500, output_size=num_words, num_layers=1)
     decoder = decoder.to(device)
-
-    import pdb; pdb.set_trace()
 
     if not (args.encoder and args.decoder):
         train_model(
@@ -386,10 +384,14 @@ if __name__ == '__main__':
         logger.info('Saving model.')
         serialize_model(encoder, 'encoder')
         serialize_model(decoder, 'decoder')
-    logger.info('Predicting on {} sentences'.format(len(test_sentences)))
-    predictions = predict(encoder, decoder, test_sentences, word_to_idx, idx_to_word)
-
-    # evaluation using BLEU metric
-    ref_dict = build_reference_dict(test_sentences)
 
 
+    trimmed_test_set = test_sentences[:100]
+    logger.info('Predicting on {} sentences'.format(len(trimmed_test_set)))
+    predictions = predict(encoder, decoder, trimmed_test_set, word_to_idx, idx_to_word)
+    ref_dict = build_reference_dict(trimmed_test_set)
+    for pred in predictions:
+        original, predicted_translation = pred
+        assert original in ref_dict
+        candidates = ref_dict[original]
+        print(f"We predicted {predicted_translation}, candidates are {candidates}")
