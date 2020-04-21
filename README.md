@@ -2,6 +2,8 @@
 
 Encoder-Decoder and Attention-based model for English -> French translation.
 
+Based on this pytorch tutorial : https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
+
 Run with [spell](https://spell.run/):
 
 `spell run --machine-type K80 --framework pytorch  "python src/seq2seq.py"`
